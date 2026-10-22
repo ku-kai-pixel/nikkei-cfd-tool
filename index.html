@@ -304,23 +304,23 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
 <div class="page" id="page-log">
   <div class="bt-intro" style="line-height:1.8">
     <b>日々の観察記録</b><br>
-    その日の指標と相場環境の判定を保存し、実データを少しずつ蓄積します。架空の勝率や損益は表示しません。同じ日付を保存すると、その日の記録を更新します。
+    4時間ごとの観察を記録できます。記録日時が異なれば同じ日でも別々に保存されます。同じ日時を保存すると、その記録を更新します。
   </div>
   <div class="log-form">
-    <div class="log-field"><label for="log-date">記録日</label><input id="log-date" type="date"></div>
+    <div class="log-field"><label for="log-date">記録日</label><input id="log-date" type="datetime-local"></div>
     <div class="log-field"><label for="log-outcome">翌営業日の日経騰落率（%・後日入力可）</label><input id="log-outcome" type="number" step="0.1" placeholder="例：+0.8 または -1.2"></div>
     <div class="log-field"><label for="log-note">相場メモ（任意）</label><textarea id="log-note" rows="3" placeholder="例：米株は弱いがCMEは底堅い。重要イベント前なので様子見。"></textarea></div>
     <div class="log-actions">
-      <button class="rand-btn" onclick="saveDailyLog()">今日のデータを記録</button>
+      <button class="rand-btn" onclick="saveDailyLog()">この時点のデータを記録</button>
       <button class="rand-btn" onclick="exportDailyLogs()">CSVを書き出す</button>
     </div>
-    <div class="note">記録される項目：ドル円、Fear &amp; Greed、米株前日比、CME日経先物騰落率、原油変動率、MA配列、環境スコア、相場環境ラベル、メモ。翌営業日の日経騰落率は、結果が出てから「編集」で追記できます。記録はこのブラウザ内に保存されます。ブラウザのデータ削除や別端末への移行に備え、定期的にCSVを書き出してください。</div>
+    <div class="note">記録される項目：記録日時、ドル円、VIX、米株前日比、CME日経先物騰落率、米10年債利回り、原油変動率、MA配列、環境スコア、相場環境ラベル、メモ。翌営業日の日経騰落率は、結果が出てから「編集」で追記できます。記録はこのブラウザ内に保存されます。ブラウザのデータ削除や別端末への移行に備え、定期的にCSVを書き出してください。</div>
   </div>
   <div class="log-summary" id="log-count">保存件数：0件</div>
   <div class="log-table-wrap">
     <table class="log-table">
-      <thead><tr><th>日付</th><th>スコア</th><th>相場環境</th><th>日経先物%</th><th>ダウ%</th><th>VIX</th><th>米10年債%</th><th>ドル円</th><th>原油%</th><th>MA</th><th>翌営業日%</th><th>メモ</th><th>操作</th></tr></thead>
-      <tbody id="log-rows"><tr><td colspan="12">まだ記録がありません。</td></tr></tbody>
+      <thead><tr><th>記録日時</th><th>スコア</th><th>相場環境</th><th>日経先物%</th><th>ダウ%</th><th>VIX</th><th>米10年債%</th><th>ドル円</th><th>原油%</th><th>MA</th><th>翌営業日%</th><th>メモ</th><th>操作</th></tr></thead>
+      <tbody id="log-rows"><tr><td colspan="13">まだ記録がありません。</td></tr></tbody>
     </table>
   </div>
 </div>
@@ -340,7 +340,7 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-hei
     <b>② スコアの見方</b><br>
     スコアはMA配列、VIX、ダウ騰落率、日経先物騰落率、米10年債利回りを単純化して合算した参考値です。閾値は仮設定で、統計的な予測精度が検証されたものではありません。スコアだけで相場の方向が決まるわけではありません。<br><br>
     <b>③ 日々の記録</b><br>
-    「日々の記録」で入力内容とメモを保存できます。翌営業日の日経騰落率は後日入力し、CSVに書き出してご自身で振り返れます。記録はこのブラウザ内に保存されます。ブラウザのデータ削除や端末変更に備えて、定期的にCSVを保存してください。<br><br>
+    「日々の記録」で入力内容とメモを日時単位で保存できます。4時間ごとに記録し、翌営業日の日経騰落率は後日入力してCSVに書き出し、ご自身で振り返れます。記録はこのブラウザ内に保存されます。ブラウザのデータ削除や端末変更に備えて、定期的にCSVを保存してください。<br><br>
     <b>④ ご注意</b><br>
     このページは手動入力のみで、リアルタイムデータ取得や価格データとの自動連携はありません。初期値は入力例であり、現在の市場データを示していません。表示は将来の値動きや利益を保証せず、実際の売買判断に使用しないでください。
   </div>
@@ -532,8 +532,8 @@ function renderDailyLogs(){
   const logs=getDailyLogs();
   document.getElementById('log-count').textContent='保存件数：'+logs.length+'件';
   const tbody=document.getElementById('log-rows');
-  if(!logs.length){tbody.innerHTML='<tr><td colspan="12">まだ記録がありません。</td></tr>';return;}
-  tbody.innerHTML=logs.map((x,i)=>`<tr><td>${escapeLog(x.date)}</td><td>${Number(x.score)>0?'+':''}${Number(x.score)}</td><td>${escapeLog(x.signal||'')}</td><td>${fmtLog(x.cme)}%</td><td>${fmtLog(x.us)}%</td><td>${fmtLog(x.fg,1)}</td><td>${fmtLog(x.us10y,2)}%</td><td>${fmtLog(x.usdjpy,1)}</td><td>${fmtLog(x.oil)}%</td><td>${x.maDir===1?'上昇':x.maDir===-1?'下降':'混在'}</td><td>${x.outcome===null||x.outcome===undefined?'—':fmtLog(x.outcome)+'%'}</td><td class="memo">${escapeLog(x.note||'')}</td><td><button class="log-del" onclick="editDailyLog('${String(x.date).replace(/[^0-9-]/g,'')}')">編集</button> <button class="log-del" onclick="deleteDailyLog('${String(x.date).replace(/[^0-9-]/g,'')}')">削除</button></td></tr>`).join('');
+  if(!logs.length){tbody.innerHTML='<tr><td colspan="13">まだ記録がありません。</td></tr>';return;}
+  tbody.innerHTML=logs.map((x,i)=>`<tr><td>${escapeLog(x.date)}</td><td>${Number(x.score)>0?'+':''}${Number(x.score)}</td><td>${escapeLog(x.signal||'')}</td><td>${fmtLog(x.cme)}%</td><td>${fmtLog(x.us)}%</td><td>${fmtLog(x.fg,1)}</td><td>${fmtLog(x.us10y,2)}%</td><td>${fmtLog(x.usdjpy,1)}</td><td>${fmtLog(x.oil)}%</td><td>${x.maDir===1?'上昇':x.maDir===-1?'下降':'混在'}</td><td>${x.outcome===null||x.outcome===undefined?'—':fmtLog(x.outcome)+'%'}</td><td class="memo">${escapeLog(x.note||'')}</td><td><button class="log-del" onclick="editDailyLog('${String(x.date).replace(/[^0-9T:-]/g,'')}')">編集</button> <button class="log-del" onclick="deleteDailyLog('${String(x.date).replace(/[^0-9T:-]/g,'')}')">削除</button></td></tr>`).join('');
 }
 function fmtLog(v,d=1){const n=Number(v);return Number.isFinite(n)?n.toFixed(d):'—';}
 function escapeLog(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -551,8 +551,8 @@ function editDailyLog(date){
 function deleteDailyLog(date){if(!confirm(date+' の記録を削除しますか？'))return;const logs=getDailyLogs().filter(x=>x.date!==date);localStorage.setItem(LOG_STORAGE_KEY,JSON.stringify(logs));renderDailyLogs();}
 function exportDailyLogs(){
   const logs=getDailyLogs(); if(!logs.length){alert('書き出す記録がありません。');return;}
-  const headers=['date','score','signal','cme_pct','us_stocks_pct','fear_greed','usd_jpy','oil_pct','ma_direction','next_session_nikkei_pct','note'];
-  const rows=logs.map(x=>[x.date,x.score,x.signal,x.cme,x.us,x.fg,x.usdjpy,x.oil,x.maDir===1?'上昇':x.maDir===-1?'下降':'混在',x.outcome??'',x.note||'']);
+  const headers=['datetime','score','signal','cme_pct','us_stocks_pct','vix','us10y_yield_pct','usd_jpy','oil_pct','ma_direction','next_session_nikkei_pct','note'];
+  const rows=logs.map(x=>[x.date,x.score,x.signal,x.cme,x.us,x.fg,x.us10y,x.usdjpy,x.oil,x.maDir===1?'上昇':x.maDir===-1?'下降':'混在',x.outcome??'',x.note||'']);
   const csv='\uFEFF'+[headers,...rows].map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));const a=document.createElement('a');a.href=url;a.download='日経先物_CFD_相場観察記録.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
 }
@@ -564,7 +564,7 @@ document.getElementById('ts').textContent=
 renderMacro();
 upd();
 const localToday=new Date();
-document.getElementById("log-date").value=[localToday.getFullYear(),String(localToday.getMonth()+1).padStart(2,"0"),String(localToday.getDate()).padStart(2,"0")].join("-");
+document.getElementById("log-date").value=[localToday.getFullYear(),String(localToday.getMonth()+1).padStart(2,"0"),String(localToday.getDate()).padStart(2,"0")].join("-")+"T"+String(localToday.getHours()).padStart(2,"0")+":"+String(localToday.getMinutes()).padStart(2,"0");
 renderDailyLogs();
 </script>
 </body>
