@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>日経先物・CFD 相場環境観察ツール</title>
+<style>
+:root {
+  --bg:#0d1117; --surface:#161b22; --surface2:#1c2128; --surface3:#21262d;
+  --border:#30363d; --border2:#21262d;
+  --text:#e6edf3; --text2:#8b949e; --text3:#6e7681;
+  --buy:#3fb950; --buy-dim:#0d2d12; --buy-mid:#1a4d22;
+  --sell:#f85149; --sell-dim:#2d0d0d; --sell-mid:#4d1a1a;
+  --neutral:#d29922; --neutral-dim:#2d2200; --neutral-mid:#4d3a00;
+  --accent:#58a6ff; --accent-dim:#0d2045;
+  --r:8px; --mono:'SF Mono','Fira Code','Consolas',monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+@media(prefers-color-scheme:light){:root{
+  --bg:#f6f8fa;--surface:#fff;--surface2:#f0f2f5;--surface3:#e8eaed;
+  --border:#d0d7de;--border2:#e8eaed;
+  --text:#1f2328;--text2:#57606a;--text3:#8c959f;
+  --buy-dim:#dafbe1;--buy-mid:#c8f0d2;
+  --sell-dim:#ffebe9;--sell-mid:#ffd7d5;
+  --neutral-dim:#fff8c5;--neutral-mid:#fff0a0;
+  --accent-dim:#ddf4ff;
+}}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
+.wrap{max-width:720px;margin:0 auto;padding:0 0 40px}
+
+/* Header */
+.hd{padding:16px 16px 0;border-bottom:1px solid var(--border);margin-bottom:14px}
+.hd-top{display:flex;align-items:center;gap:10px;margin-bottom:2px}
+.hd-title{font-size:15px;font-weight:600}
+.hd-badge{font-size:10px;padding:2px 8px;border-radius:3px;background:var(--accent-dim);color:var(--accent);font-family:var(--mono)}
+.hd-sub{font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:10px}
+.hd-tabs{display:flex;gap:0}
+.htab{padding:8px 14px;font-size:13px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent}
+.htab.on{color:var(--text);border-bottom-color:var(--accent)}
+
+/* Pages */
+.page{display:none;padding:0 16px;flex-direction:column;gap:10px}
+.page.on{display:flex}
+
+/* Banner */
+.banner{border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:14px;border:1px solid}
+.banner.buy{background:var(--buy-dim);border-color:var(--buy)}
+.banner.sell{background:var(--sell-dim);border-color:var(--sell)}
+.banner.neutral{background:var(--neutral-dim);border-color:var(--neutral)}
+.banner-icon{font-size:26px;flex-shrink:0}
+.banner-lbl{font-size:10px;color:var(--text2);font-family:var(--mono);margin-bottom:2px}
+.banner-txt{font-size:20px;font-weight:700;letter-spacing:-.02em}
+.banner-txt.buy{color:var(--buy)}
+.banner-txt.sell{color:var(--sell)}
+.banner-txt.neutral{color:var(--neutral)}
+.banner-sub{font-size:12px;color:var(--text2);margin-top:2px}
+.banner-score{margin-left:auto;text-align:right;flex-shrink:0}
+.score-big{font-size:34px;font-weight:700;font-family:var(--mono);line-height:1}
+.score-big.buy{color:var(--buy)}
+.score-big.sell{color:var(--sell)}
+.score-big.neutral{color:var(--neutral)}
+.score-lbl{font-size:10px;color:var(--text3);margin-top:2px}
+
+/* Gauge */
+.gauge-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
+.gauge-lbl{font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:8px}
+.gauge-track{height:10px;background:linear-gradient(to right,#f85149,#d29922,#3fb950);border-radius:5px;position:relative}
+.gauge-needle{position:absolute;top:50%;width:3px;height:20px;background:var(--text);border-radius:2px;transform:translate(-50%,-50%);transition:left .5s cubic-bezier(.4,0,.2,1);box-shadow:0 0 4px rgba(0,0,0,.5)}
+.gauge-end{display:flex;justify-content:space-between;margin-top:5px;font-size:10px;color:var(--text3);font-family:var(--mono)}
+
+/* Section label */
+.sec-lbl{font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:.06em}
+
+/* MA card */
+.ma-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
+.ma-price-row{display:flex;align-items:baseline;gap:8px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.ma-price{font-size:24px;font-weight:700;font-family:var(--mono)}
+.ma-price-lbl{font-size:12px;color:var(--text2)}
+.ma-trend-badge{margin-left:auto;font-size:11px;padding:3px 10px;border-radius:4px}
+.ma-trend-badge.up{background:var(--buy-dim);color:var(--buy)}
+.ma-trend-badge.dn{background:var(--sell-dim);color:var(--sell)}
+.ma-trend-badge.fl{background:var(--neutral-dim);color:var(--neutral)}
+.ma-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px}
+.ma-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ma-name{width:55px;font-family:var(--mono);font-size:12px;color:var(--text2)}
+.ma-val{flex:1;font-family:var(--mono);font-size:13px}
+.ma-pos{font-size:11px}
+.ma-pos.a{color:var(--buy)}
+.ma-pos.b{color:var(--sell)}
+.ma-sep{height:1px;background:var(--border);margin:4px 0}
+.cross-alert{margin-top:8px;padding:6px 10px;border-radius:5px;font-size:12px;display:flex;align-items:center;gap:6px}
+.cross-alert.gc{background:var(--buy-dim);color:var(--buy)}
+.cross-alert.dc{background:var(--sell-dim);color:var(--sell)}
+.cross-alert.none{background:var(--surface2);color:var(--text3)}
+
+/* Macro grid */
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media(max-width:480px){.mgrid{grid-template-columns:repeat(2,1fr)}}
+.mcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;border-left:3px solid}
+.mcard.bull{border-left-color:var(--buy)}
+.mcard.bear{border-left-color:var(--sell)}
+.mcard.neut{border-left-color:var(--border)}
+.mc-name{font-size:10px;color:var(--text3);margin-bottom:3px;font-family:var(--mono)}
+.mc-val{font-size:17px;font-weight:600;letter-spacing:-.01em;font-family:var(--mono)}
+.mc-chg{font-size:11px;margin-top:1px}
+.mc-chg.up{color:var(--buy)}
+.mc-chg.dn{color:var(--sell)}
+.mc-badge{font-size:10px;padding:1px 6px;border-radius:3px;display:inline-block;margin-top:4px;font-family:var(--mono)}
+.mc-badge.bull{background:var(--buy-dim);color:var(--buy)}
+.mc-badge.bear{background:var(--sell-dim);color:var(--sell)}
+.mc-badge.neut{background:var(--neutral-dim);color:var(--neutral)}
+
+/* Cond grid */
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cbox{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
+.cbox-title{font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:8px}
+.cond-row{display:flex;align-items:flex-start;gap:7px;padding:4px 0;border-bottom:1px solid var(--border2)}
+.cond-row:last-child{border:none}
+.cond-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.cond-name{flex:1;font-size:11px;color:var(--text2);line-height:1.4}
+.cond-ok{font-size:11px;font-family:var(--mono);flex-shrink:0}
+.cond-ok.y{color:var(--buy)}
+.cond-ok.n{color:var(--sell)}
+.cond-ok.m{color:var(--neutral)}
+
+/* Strategy */
+.strat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
+.strat-title{font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:10px}
+.strat-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border2)}
+.strat-row:last-child{border:none}
+.strat-label{font-size:12px;color:var(--text2);width:90px}
+.strat-val{font-size:13px;font-weight:500;font-family:var(--mono)}
+.strat-val.buy{color:var(--buy)}
+.strat-val.sell{color:var(--sell)}
+.strat-val.neutral{color:var(--neutral)}
+.strat-note{font-size:11px;color:var(--text3);margin-left:auto}
+
+/* Controls */
+.ctrl-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
+.ctrl-title{font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:10px}
+.ctrl-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.ctrl-row:last-of-type{margin-bottom:0}
+.ctrl-lbl{font-size:11px;color:var(--text2);width:120px;flex-shrink:0}
+.ctrl-sl{flex:1;accent-color:var(--accent);cursor:pointer}
+.ctrl-v{font-size:12px;font-family:var(--mono);width:60px;text-align:right;flex-shrink:0}
+.rand-btn{width:100%;margin-top:10px;padding:8px;background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent);border-radius:var(--r);font-size:13px;cursor:pointer;transition:opacity .15s}
+.rand-btn:hover{opacity:.8}
+
+/* Note */
+.note{font-size:11px;color:var(--text3);line-height:1.7;padding:10px 12px;background:var(--surface2);border-radius:var(--r);border-left:3px solid var(--border)}
+
+/* Backtest page */
+.bt-intro{font-size:12px;color:var(--text2);line-height:1.7;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r)}
+.bt-table{width:100%;border-collapse:collapse;font-size:12px;font-family:var(--mono)}
+.bt-table th{text-align:left;padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text3);font-size:10px}
+.bt-table td{padding:6px 10px;border-bottom:1px solid var(--border2)}
+.bt-table tr:last-child td{border:none}
+.bt-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.win{color:var(--buy)}
+.lose{color:var(--sell)}
+.neut-t{color:var(--neutral)}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;text-align:center}
+.stat-num{font-size:22px;font-weight:700;font-family:var(--mono);margin-bottom:2px}
+.stat-lbl{font-size:10px;color:var(--text3)}
+
+/* Daily log */
+.log-form{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:10px}
+.log-field{display:flex;flex-direction:column;gap:5px}
+.log-field label{font-size:12px;color:var(--text2)}
+.log-field input,.log-field textarea{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:9px;font:inherit;font-size:13px}
+.log-actions{display:flex;gap:8px;flex-wrap:wrap}
+.log-actions .rand-btn{width:auto;flex:1}
+.log-summary{font-size:12px;color:var(--text2)}
+.log-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--r)}
+.log-table{border-collapse:collapse;width:100%;font-size:11px;white-space:nowrap}
+.log-table th,.log-table td{padding:8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+.log-table th{background:var(--surface2);color:var(--text2);font-weight:600}
+.log-table td.memo{white-space:normal;min-width:160px;max-width:260px}
+.log-del{background:var(--surface2);color:var(--text2);border:1px solid var(--border);padding:4px 7px;border-radius:4px;cursor:pointer;font-size:11px}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hd">
+  <div class="hd-top">
+    <span class="hd-title">日経先物・CFD 相場環境観察ツール</span>
+    <span class="hd-badge">MARKET CONTEXT</span>
+  </div>
+  <div class="hd-sub" id="ts"></div>
+  <div class="hd-tabs">
+    <div class="htab on" onclick="showPage('signal',this)">相場環境</div>
+    <div class="htab" onclick="showPage('log',this)">日々の記録</div>
+    <div class="htab" onclick="showPage('guide',this)">使い方</div>
+  </div>
+</div>
+
+<!-- ===== SIGNAL PAGE ===== -->
+<div class="page on" id="page-signal">
+
+  <div class="banner neutral" id="banner">
+    <div class="banner-icon" id="b-icon">⚖️</div>
+    <div>
+      <div class="banner-lbl">MARKET ENVIRONMENT</div>
+      <div class="banner-txt neutral" id="b-txt">中立・方向感なし</div>
+      <div class="banner-sub" id="b-sub">各指標の方向が揃っていません</div>
+    </div>
+    <div class="banner-score">
+      <div class="score-big neutral" id="b-score">0</div>
+      <div class="score-lbl">環境スコア (-10〜+10)</div>
+    </div>
+  </div>
+
+  <div class="gauge-box">
+    <div class="gauge-lbl">ENVIRONMENT METER</div>
+    <div class="gauge-track">
+      <div class="gauge-needle" id="needle" style="left:50%"></div>
+    </div>
+    <div class="gauge-end"><span>下降材料優勢</span><span>拮抗</span><span>上昇材料優勢</span></div>
+  </div>
+
+
+  <div class="sec-lbl">TECHNICAL — 4時間足 移動平均</div>
+  <div class="ma-box">
+    <div class="ma-price-row">
+      <span class="ma-price" id="ma-price">—</span>
+      <span class="ma-price-lbl">価格データ連携なし</span>
+      <span class="ma-trend-badge up" id="ma-trend-badge">上昇トレンド ↑</span>
+    </div>
+    <div id="ma-rows"></div>
+    <div class="ma-sep"></div>
+    <div class="cross-alert none" id="cross-alert">MA配列は手動選択です。価格データとの自動照合はありません。</div>
+  </div>
+
+  <div class="sec-lbl">MACRO — 日経関連指標</div>
+  <div class="mgrid" id="mgrid"></div>
+
+  <div class="sec-lbl">条件チェック</div>
+  <div class="cgrid">
+    <div class="cbox">
+      <div class="cbox-title">上昇材料チェック</div>
+      <div id="buy-conds"></div>
+    </div>
+    <div class="cbox">
+      <div class="cbox-title">下降材料チェック</div>
+      <div id="sell-conds"></div>
+    </div>
+  </div>
+
+  <div class="sec-lbl">相場環境の整理</div>
+  <div class="strat-box">
+    <div class="strat-title">OBSERVATION SUMMARY</div>
+    <div id="strat-rows"></div>
+  </div>
+
+  <div class="sec-lbl">観察用の手動入力</div>
+  <div class="ctrl-box">
+    <div class="ctrl-title">MANUAL INPUT</div>
+    <div class="ctrl-row">
+      <span class="ctrl-lbl">ドル円 (¥)</span>
+      <input type="range" class="ctrl-sl" id="sl-usdjpy" min="130" max="165" step="0.5" value="150" oninput="upd()">
+      <span class="ctrl-v" id="vl-usdjpy">150.0</span>
+    </div>
+    <div class="ctrl-row">
+      <span class="ctrl-lbl">VIX（恐怖指数）</span>
+      <input type="range" class="ctrl-sl" id="sl-fg" min="0" max="60" step="0.1" value="20" oninput="upd()">
+      <span class="ctrl-v" id="vl-fg">20.0</span>
+    </div>
+    <div class="ctrl-row">
+      <span class="ctrl-lbl">ダウ騰落率 (%)</span>
+      <input type="range" class="ctrl-sl" id="sl-us" min="-10" max="10" step="0.1" value="0" oninput="upd()">
+      <span class="ctrl-v" id="vl-us">+0.0</span>
+    </div>
+    <div class="ctrl-row">
+      <span class="ctrl-lbl">日経先物騰落率（%）</span>
+      <input type="range" class="ctrl-sl" id="sl-cme" min="-10" max="10" step="0.1" value="0" oninput="upd()">
+      <span class="ctrl-v" id="vl-cme">+0.0%</span>
+    </div>
+    <div class="ctrl-row">
+      <span class="ctrl-lbl">米10年債利回り（%）</span>
+      <input type="range" class="ctrl-sl" id="sl-us10y" min="0" max="10" step="0.01" value="4.40" oninput="upd()">
+      <span class="ctrl-v" id="vl-us10y">4.40</span>
+    </div>
+    <div class="ctrl-row">
+      <span class="ctrl-lbl">原油変動率 (%)</span>
+      <input type="range" class="ctrl-sl" id="sl-oil" min="-10" max="10" step="0.1" value="0" oninput="upd()">
+      <span class="ctrl-v" id="vl-oil">0.0%</span>
+    </div>
+    <div class="ctrl-row">
+      <span class="ctrl-lbl">MA配列</span>
+      <input type="range" class="ctrl-sl" id="sl-ma" min="-1" max="1" step="1" value="0" oninput="upd()">
+      <span class="ctrl-v" id="vl-ma">混在</span>
+    </div>
+    
+  </div>
+
+  <div class="note"><b>重要：</b>このツールは相場の観察・学習用です。売買判断や売買推奨を行いません。データは手動入力で、リアルタイム配信や価格データとの自動連携はありません。初期値は入力例であり、現在の市場データではありません。スコア・表示は将来の値動きや利益を保証せず、実際の売買判断に使用しないでください。</div>
+</div>
+
+<!-- ===== DAILY LOG PAGE ===== -->
+<div class="page" id="page-log">
+  <div class="bt-intro" style="line-height:1.8">
+    <b>日々の観察記録</b><br>
+    4時間ごとの観察を記録できます。記録日時が異なれば同じ日でも別々に保存されます。同じ日時を保存すると、その記録を更新します。
+  </div>
+  <div class="log-form">
+    <div class="log-field"><label for="log-date">記録日</label><input id="log-date" type="datetime-local"></div>
+    <div class="log-field"><label for="log-outcome">翌営業日の日経騰落率（%・後日入力可）</label><input id="log-outcome" type="number" step="0.1" placeholder="例：+0.8 または -1.2"></div>
+    <div class="log-field"><label for="log-note">相場メモ（任意）</label><textarea id="log-note" rows="3" placeholder="例：米株は弱いがCMEは底堅い。重要イベント前なので様子見。"></textarea></div>
+    <div class="log-actions">
+      <button class="rand-btn" onclick="saveDailyLog()">この時点のデータを記録</button>
+      <button class="rand-btn" onclick="exportDailyLogs()">CSVを書き出す</button>
+    </div>
+    <div class="note">記録される項目：記録日時、ドル円、VIX、米株前日比、CME日経先物騰落率、米10年債利回り、原油変動率、MA配列、環境スコア、相場環境ラベル、メモ。翌営業日の日経騰落率は、結果が出てから「編集」で追記できます。記録はこのブラウザ内に保存されます。ブラウザのデータ削除や別端末への移行に備え、定期的にCSVを書き出してください。</div>
+  </div>
+  <div class="log-summary" id="log-count">保存件数：0件</div>
+  <div class="log-table-wrap">
+    <table class="log-table">
+      <thead><tr><th>記録日時</th><th>スコア</th><th>相場環境</th><th>日経先物%</th><th>ダウ%</th><th>VIX</th><th>米10年債%</th><th>ドル円</th><th>原油%</th><th>MA</th><th>翌営業日%</th><th>メモ</th><th>操作</th></tr></thead>
+      <tbody id="log-rows"><tr><td colspan="13">まだ記録がありません。</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== GUIDE PAGE ===== -->
+<div class="page" id="page-guide">
+  <div class="bt-intro" style="line-height:1.9">
+    <b>このツールについて</b><br>
+    日経先物を取り巻く複数の材料を並べ、相場環境を観察するための個人制作ツールです。売買判断や売買推奨を行うものではありません。<br><br>
+    <b>① 入力する項目</b><br>
+    ・日経先物騰落率：前日終値比の変化率を-10〜+10%で入力<br>
+    ・ダウ騰落率：前日比の変化率を-10〜+10%で入力<br>
+    ・VIX（恐怖指数）：確認した値を0〜60で入力（18未満=強気、25超=弱気）<br>
+    ・米10年債利回り：確認した値を0〜10%で入力<br>
+    ・ドル円、原油：背景情報として入力。ドル円と原油は環境スコアに直接加算しません<br>
+    ・MA配列：チャートでMA20・MA50・MA100を確認し、上昇／下降／混在を手動選択<br><br>
+    <b>② スコアの見方</b><br>
+    スコアはMA配列、VIX、ダウ騰落率、日経先物騰落率、米10年債利回りを単純化して合算した参考値です。閾値は仮設定で、統計的な予測精度が検証されたものではありません。スコアだけで相場の方向が決まるわけではありません。<br><br>
+    <b>③ 日々の記録</b><br>
+    「日々の記録」で入力内容とメモを日時単位で保存できます。4時間ごとに記録し、翌営業日の日経騰落率は後日入力してCSVに書き出し、ご自身で振り返れます。記録はこのブラウザ内に保存されます。ブラウザのデータ削除や端末変更に備えて、定期的にCSVを保存してください。<br><br>
+    <b>④ ご注意</b><br>
+    このページは手動入力のみで、リアルタイムデータ取得や価格データとの自動連携はありません。初期値は入力例であり、現在の市場データを示していません。表示は将来の値動きや利益を保証せず、実際の売買判断に使用しないでください。
+  </div>
+</div>
+</div><!-- /wrap -->
+
+<script>
+const macros = [
+  {key:'usdjpy', name:'ドル円（参考）',         val:158.0, chg:+0.1, fmt:v=>`¥${v.toFixed(1)}`,                   bull:v=>false,  bear:v=>false},
+  {key:'dow',    name:'ダウ騰落率（入力値）',   val:0,     chg:0,    fmt:v=>(v>=0?'+':'')+v.toFixed(1)+'%',        bull:v=>v>0.5,  bear:v=>v<-1},
+  {key:'cme',    name:'日経先物騰落率（入力値）',val:0,    chg:0,    fmt:v=>(v>=0?'+':'')+v.toFixed(1)+'%',        bull:v=>v>0.3,  bear:v=>v<-0.3},
+  {key:'oil',    name:'原油変動率（入力値）',   val:0,     chg:0,    fmt:v=>(v>=0?'+':'')+v.toFixed(1)+'%',        bull:v=>v<0,    bear:v=>v>3},
+  {key:'vix',    name:'VIX（恐怖指数）',        val:20,    chg:0,    fmt:v=>v.toFixed(1),                          bull:v=>v<18,   bear:v=>v>25},
+  {key:'us10y',  name:'米10年債利回り（%）',    val:4.4,   chg:0,    fmt:v=>v.toFixed(2)+'%',                      bull:v=>v<4.0,  bear:v=>v>5.0},
+];
+
+const maBase = [
+  {label:'MA20',  val:66542, color:'#58a6ff'},
+  {label:'MA50',  val:66575, color:'#d2a8ff'},
+  {label:'MA100', val:61176, color:'#ffa657'},
+];
+let nkPrice = 63630;
+
+function renderMacro(){
+  document.getElementById('mgrid').innerHTML = macros.map(m=>{
+    const bull=m.bull(m.val), bear=m.bear(m.val);
+    const cls=bull?'bull':bear?'bear':'neut';
+    const chgUp = m.chg>=0;
+    const chgStr=m.key==='cme' ? '入力した騰落率' : (m.chg>=0?'+':'')+m.chg.toFixed(m.key==='oil'||m.key==='sp500'?1:2);
+    return `<div class="mcard ${cls}">
+      <div class="mc-name">${m.name}</div>
+      <div class="mc-val">${m.fmt(m.val)}</div>
+      <div class="mc-chg ${chgUp?'up':'dn'}">${chgStr}</div>
+      <span class="mc-badge ${cls}">${bull?'強気':bear?'弱気':'中立'}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderMA(maDir){
+  document.getElementById('ma-price').textContent = '—';
+  const bull = maDir===1, bear = maDir===-1;
+  const tb = document.getElementById('ma-trend-badge');
+  if(bull){tb.textContent='上昇配列（手動入力） ↑';tb.className='ma-trend-badge up';}
+  else if(bear){tb.textContent='下降配列（手動入力） ↓';tb.className='ma-trend-badge dn';}
+  else{tb.textContent='混在・未確定（手動入力） ↔';tb.className='ma-trend-badge fl';}
+  document.getElementById('ma-rows').innerHTML = '<div class="note">MA20・MA50・MA100の実数値は取得していません。チャートを確認し、配列をスライダーで手動選択してください。</div>';
+  const ca = document.getElementById('cross-alert');
+  ca.textContent='クロスの自動検出は行いません。チャート上でご確認ください。';
+  ca.className='cross-alert none';
+}
+
+function calcScore(vix, us, cme, us10y, maDir){
+  let s=0;
+  s += maDir*3;
+  // VIXは逆指標：低いほど強気、高いほど弱気
+  s += vix<15?2:vix<18?1:vix>30?-2:vix>25?-1:0;
+  // ダウ騰落率
+  s += us>1.5?2:us>0.5?1:us<-1.5?-2:us<-0.5?-1:0;
+  // 日経先物騰落率
+  s += cme>0.5?2:cme>0.1?1:cme<-0.5?-2:cme<-0.1?-1:0;
+  // 米10年債：低いほど株式に優しい
+  s += us10y<3.5?1:us10y<4.5?0:us10y<5.0?-1:-2;
+  // 原油は背景情報として表示し、方向スコアには直接加算しない。
+  return Math.max(-10,Math.min(10,s));
+}
+
+function renderSignal(score, vix, us, cme, us10y, maDir){
+  const pct = (score+10)/20*100;
+  document.getElementById('needle').style.left = pct+'%';
+
+  let cls,icon,txt,sub;
+  if(score>=6){cls='buy';icon='📈';txt='上昇傾向';sub='入力された指標では上向きの材料が比較的多い状態';}
+  else if(score>=3){cls='buy';icon='↗️';txt='やや上昇傾向';sub='上向きの材料がやや多い状態';}
+  else if(score<=-6){cls='sell';icon='📉';txt='下降傾向';sub='入力された指標では下向きの材料が比較的多い状態';}
+  else if(score<=-3){cls='sell';icon='↘️';txt='やや下降傾向';sub='下向きの材料がやや多い状態';}
+  else{cls='neutral';icon='↔️';txt='中立・方向感なし';sub='上向き・下向きの材料が拮抗している状態';}
+
+  const bn=document.getElementById('banner');
+  bn.className='banner '+cls;
+  document.getElementById('b-icon').textContent=icon;
+  const bt=document.getElementById('b-txt');bt.textContent=txt;bt.className='banner-txt '+cls;
+  document.getElementById('b-sub').textContent=sub;
+  const bs=document.getElementById('b-score');
+  bs.textContent=(score>0?'+':'')+score;bs.className='score-big '+cls;
+
+  const upConds=[
+    {name:'MA20・50・100の上昇配列（手動選択）', ok:maDir===1},
+    {name:'VIX が18未満（リスクオン）', ok:vix<18},
+    {name:'ダウ騰落率が +0.5%超', ok:us>0.5},
+    {name:'日経先物騰落率が +0.1%超', ok:cme>0.1},
+    {name:'米10年債 4.5%未満（金利低め）', ok:us10y<4.5},
+  ];
+  const downConds=[
+    {name:'MA20・50・100の下降配列（手動選択）', ok:maDir===-1},
+    {name:'VIX が25超（リスクオフ）', ok:vix>25},
+    {name:'ダウ騰落率が -0.5%未満', ok:us<-0.5},
+    {name:'日経先物騰落率が -0.1%未満', ok:cme<-0.1},
+    {name:'米10年債 5.0%超（金利高め）', ok:us10y>5.0},
+  ];
+  document.getElementById('buy-conds').innerHTML = upConds.map(c=>`
+    <div class="cond-row"><div class="cond-dot" style="background:${c.ok?'var(--buy)':'var(--border)'}"></div><span class="cond-name">${c.name}</span><span class="cond-ok ${c.ok?'y':'n'}">${c.ok?'✓':'-'}</span></div>`).join('');
+  document.getElementById('sell-conds').innerHTML = downConds.map(c=>`
+    <div class="cond-row"><div class="cond-dot" style="background:${c.ok?'var(--sell)':'var(--border)'}"></div><span class="cond-name">${c.name}</span><span class="cond-ok ${c.ok?'y':'n'}">${c.ok?'✓':'-'}</span></div>`).join('');
+
+  const ups=upConds.filter(c=>c.ok).length;
+  const downs=downConds.filter(c=>c.ok).length;
+  const summary=[
+    {l:'相場環境ラベル',v:txt,c:cls},
+    {l:'上昇材料',v:`${ups} / ${upConds.length} 項目`,c:'buy'},
+    {l:'下降材料',v:`${downs} / ${downConds.length} 項目`,c:'sell'},
+    {l:'読み方',v:'複数指標をまとめた参考表示。予測ではありません。',c:'neutral'},
+  ];
+  document.getElementById('strat-rows').innerHTML=summary.map(r=>`<div class="strat-row"><span class="strat-label">${r.l}</span><span class="strat-val ${r.c}">${r.v}</span></div>`).join('');
+}
+
+
+function upd(){
+  const usdjpy=parseFloat(document.getElementById('sl-usdjpy').value);
+  const vix=parseFloat(document.getElementById('sl-fg').value);
+  const us=parseFloat(document.getElementById('sl-us').value);
+  const cme=parseFloat(document.getElementById('sl-cme').value);
+  const us10y=parseFloat(document.getElementById('sl-us10y').value);
+  const maDir=parseInt(document.getElementById('sl-ma').value);
+  const oil=parseFloat(document.getElementById('sl-oil').value);
+  document.getElementById('vl-usdjpy').textContent=usdjpy.toFixed(1);
+  document.getElementById('vl-fg').textContent=vix.toFixed(1);
+  document.getElementById('vl-us').textContent=(us>=0?'+':'')+us.toFixed(1);
+  document.getElementById('vl-cme').textContent=(cme>=0?'+':'')+cme.toFixed(1)+'%';
+  document.getElementById('vl-us10y').textContent=us10y.toFixed(2);
+  document.getElementById('vl-ma').textContent=maDir===1?'上昇':maDir===-1?'下降':'混在';
+  document.getElementById('vl-oil').textContent=(oil>=0?'+':'')+oil.toFixed(1)+'%';
+  // スライダーと指標カードの表示値を同期
+  macros.find(m=>m.key==='usdjpy').val=usdjpy;
+  const vixMacro=macros.find(m=>m.key==='vix');
+  vixMacro.val=vix; vixMacro.chg=0;
+  const usMacro=macros.find(m=>m.key==='dow');
+  usMacro.val=us; usMacro.chg=us;
+  const cmeMacro=macros.find(m=>m.key==='cme');
+  cmeMacro.val=cme; cmeMacro.chg=cme;
+  const oilMacro=macros.find(m=>m.key==='oil');
+  oilMacro.val=oil; oilMacro.chg=oil;
+  const us10yMacro=macros.find(m=>m.key==='us10y');
+  us10yMacro.val=us10y; us10yMacro.chg=0;
+  renderMacro();
+  const score=calcScore(vix,us,cme,us10y,maDir);
+  renderSignal(score,vix,us,cme,us10y,maDir);
+  renderMA(maDir);
+}
+
+function showPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.htab').forEach(t=>t.classList.remove('on'));
+  document.getElementById('page-'+id).classList.add('on');
+  el.classList.add('on');
+}
+
+const LOG_STORAGE_KEY = 'nikkeiCfdObservationLogsV2';
+function getDailyLogs(){
+  try{return JSON.parse(localStorage.getItem(LOG_STORAGE_KEY)||'[]')}catch(e){return []}
+}
+function signalLabel(score){
+  if(score>=6)return '上昇傾向'; if(score>=3)return 'やや上昇傾向';
+  if(score<=-6)return '下降傾向'; if(score<=-3)return 'やや下降傾向'; return '中立・方向感なし';
+}
+function currentDailySnapshot(){
+  const usdjpy=Number(document.getElementById('sl-usdjpy').value);
+  const fg=Number(document.getElementById('sl-fg').value);
+  const us=Number(document.getElementById('sl-us').value);
+  const cme=Number(document.getElementById('sl-cme').value);
+  const us10y=Number(document.getElementById('sl-us10y').value);
+  const maDir=Number(document.getElementById('sl-ma').value);
+  const oil=Number(document.getElementById('sl-oil').value);
+  const score=calcScore(fg,us,cme,us10y,maDir);
+  const outcomeText=document.getElementById('log-outcome').value.trim();
+  const outcome=outcomeText===''?null:Number(outcomeText);
+  return {date:document.getElementById('log-date').value,usdjpy,fg,us,cme,us10y,oil,maDir,score,signal:signalLabel(score),outcome,note:document.getElementById('log-note').value.trim()};
+}
+function saveDailyLog(){
+  const item=currentDailySnapshot();
+  if(!item.date){alert('記録日を選んでください。');return;}
+  let logs=getDailyLogs();
+  const idx=logs.findIndex(x=>x.date===item.date);
+  if(idx>=0){if(!confirm(item.date+' の記録を更新しますか？'))return;logs[idx]=item;}else logs.push(item);
+  logs.sort((a,b)=>b.date.localeCompare(a.date));
+  try{localStorage.setItem(LOG_STORAGE_KEY,JSON.stringify(logs));renderDailyLogs();alert('記録を保存しました。');}
+  catch(e){alert('保存できませんでした。ブラウザの保存容量や設定を確認してください。');}
+}
+function renderDailyLogs(){
+  const logs=getDailyLogs();
+  document.getElementById('log-count').textContent='保存件数：'+logs.length+'件';
+  const tbody=document.getElementById('log-rows');
+  if(!logs.length){tbody.innerHTML='<tr><td colspan="13">まだ記録がありません。</td></tr>';return;}
+  tbody.innerHTML=logs.map((x,i)=>`<tr><td>${escapeLog(x.date)}</td><td>${Number(x.score)>0?'+':''}${Number(x.score)}</td><td>${escapeLog(x.signal||'')}</td><td>${fmtLog(x.cme)}%</td><td>${fmtLog(x.us)}%</td><td>${fmtLog(x.fg,1)}</td><td>${fmtLog(x.us10y,2)}%</td><td>${fmtLog(x.usdjpy,1)}</td><td>${fmtLog(x.oil)}%</td><td>${x.maDir===1?'上昇':x.maDir===-1?'下降':'混在'}</td><td>${x.outcome===null||x.outcome===undefined?'—':fmtLog(x.outcome)+'%'}</td><td class="memo">${escapeLog(x.note||'')}</td><td><button class="log-del" onclick="editDailyLog('${String(x.date).replace(/[^0-9T:-]/g,'')}')">編集</button> <button class="log-del" onclick="deleteDailyLog('${String(x.date).replace(/[^0-9T:-]/g,'')}')">削除</button></td></tr>`).join('');
+}
+function fmtLog(v,d=1){const n=Number(v);return Number.isFinite(n)?n.toFixed(d):'—';}
+function escapeLog(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function editDailyLog(date){
+  const x=getDailyLogs().find(r=>r.date===date); if(!x)return;
+  document.getElementById('log-date').value=x.date;
+  document.getElementById('sl-usdjpy').value=x.usdjpy;document.getElementById('sl-fg').value=x.fg;
+  document.getElementById('sl-us').value=x.us;document.getElementById('sl-cme').value=x.cme;
+  document.getElementById('sl-us10y').value=x.us10y||4.4;
+  document.getElementById('sl-oil').value=x.oil;document.getElementById('sl-ma').value=x.maDir;
+  document.getElementById('log-outcome').value=x.outcome===null||x.outcome===undefined?'':x.outcome;
+  document.getElementById('log-note').value=x.note||'';upd();
+  document.getElementById('log-date').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function deleteDailyLog(date){if(!confirm(date+' の記録を削除しますか？'))return;const logs=getDailyLogs().filter(x=>x.date!==date);localStorage.setItem(LOG_STORAGE_KEY,JSON.stringify(logs));renderDailyLogs();}
+function exportDailyLogs(){
+  const logs=getDailyLogs(); if(!logs.length){alert('書き出す記録がありません。');return;}
+  const headers=['datetime','score','signal','cme_pct','us_stocks_pct','vix','us10y_yield_pct','usd_jpy','oil_pct','ma_direction','next_session_nikkei_pct','note'];
+  const rows=logs.map(x=>[x.date,x.score,x.signal,x.cme,x.us,x.fg,x.us10y,x.usdjpy,x.oil,x.maDir===1?'上昇':x.maDir===-1?'下降':'混在',x.outcome??'',x.note||'']);
+  const csv='\uFEFF'+[headers,...rows].map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));const a=document.createElement('a');a.href=url;a.download='日経先物_CFD_相場観察記録.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+
+const now=new Date();
+document.getElementById('ts').textContent=
+  `手動入力のみ｜リアルタイム配信なし｜相場観察・学習用`; 
+
+renderMacro();
+upd();
+const localToday=new Date();
+document.getElementById("log-date").value=[localToday.getFullYear(),String(localToday.getMonth()+1).padStart(2,"0"),String(localToday.getDate()).padStart(2,"0")].join("-")+"T"+String(localToday.getHours()).padStart(2,"0")+":"+String(localToday.getMinutes()).padStart(2,"0");
+renderDailyLogs();
+</script>
+</body>
+</html>
